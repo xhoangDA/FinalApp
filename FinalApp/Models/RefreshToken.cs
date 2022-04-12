@@ -20,7 +20,7 @@ namespace FinalApp.Data
         public bool IsUsed { get; set; }
         public bool IsRevoked { get; set; }
         public DateTime IssuedAt { get; set; }
-        public DateTime ExpriredAt { get; set; }
+        public DateTime ExpireAt { get; set; }
 
     }
 }
