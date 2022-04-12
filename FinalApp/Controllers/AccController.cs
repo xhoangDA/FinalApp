@@ -214,7 +214,7 @@ namespace FinalApp.Controllers
                 }
 
                 //check 4: Rt exist in DB?
-                string selectSql = "SELECT * FROM RefreshToken WHERE Token = " + model.RefreshToken;
+                string selectSql = "SELECT * FROM RefreshToken WHERE Token ='" + model.RefreshToken + "'";
                 DataTable dt = new DataTable();
 
                 //SqlConnection connect = new SqlConnection(connectStr);
@@ -276,9 +276,7 @@ namespace FinalApp.Controllers
                 storedToken.IsRevoked = true;
                 storedToken.IsUsed = true;
 
-                string addToDbSql = @"INSERT INTO RefreshToken(Id, UserId, JwtId, Token, IsUsed, IsRevoked, IssuedAt, ExpireAt) VALUES('" + storedToken.Id +
-                    "','" + storedToken.UserId + "', '" + storedToken.JwtId + "', '" + storedToken.Token + "', '" + storedToken.IsUsed + "', '" + storedToken.IsRevoked
-                    + "', '" + storedToken.IssuedAt + "', '" + storedToken.ExpireAt + "');";
+                string addToDbSql = "UPDATE RefreshToken SET IsUsed ='" + storedToken.IsUsed + "', IsRevoked ='"+ storedToken.IsRevoked + "' WHERE JwtId = '" + storedToken.JwtId + "'";
 
                 //SqlConnection con = new SqlConnection(connectStr);
                 SqlCommand addRefreshToken = new SqlCommand(addToDbSql, con);
