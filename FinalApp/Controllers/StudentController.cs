@@ -1,4 +1,5 @@
 ﻿using FinalApp.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -14,36 +15,8 @@ namespace FinalApp.Controllers
     {
         public static List<Student> students = new List<Student>();
 
-        //[Authorize]
-        // GET: Students
-        //public IActionResult Get(string strSearch)
-        //{
-        //    try
-        //    {
-        //        if (string.IsNullOrEmpty(HttpContext.Session.GetString("LoginSession")))
-        //        {
-        //            return BadRequest();
-        //        }
-        //        else
-        //        {
-        //            StudentList stuList = new StudentList();
-        //            List<Student> obj = stuList.getStudent(string.Empty).OrderBy(x => x.FullName).ToList();
-        //            //Kiểm tra xem chuỗi có dữ liệu chưa?
-        //            if (!String.IsNullOrEmpty(strSearch))
-        //            {
-        //                obj = obj.Where(x => x.FullName.Contains(strSearch) || x.Address.Contains(strSearch)).ToList();
-        //            }
-        //            return Ok(obj);
-        //        }
-
-        //    }
-        //    catch
-        //    {
-        //        return BadRequest();
-        //    }
-        //}
-
         [HttpGet]
+        [Authorize]
         public IActionResult Get()
         {
             try
@@ -62,7 +35,7 @@ namespace FinalApp.Controllers
 
 
         [HttpGet("{id}")]
-        //[Authorize]
+        [Authorize]
         //Detail
         public IActionResult Details(String id = "")
         {
@@ -77,7 +50,7 @@ namespace FinalApp.Controllers
 
 
         [HttpPost]
-        //[Authorize]
+        [Authorize]
         //[ValidateAntiForgeryToken]
         public IActionResult Create([Bind("ID,FullName,Address,Note")] Student student)
         {
@@ -103,7 +76,7 @@ namespace FinalApp.Controllers
         }
 
         [HttpPut("{id}")]
-        //[Authorize]
+        [Authorize]
         //[ValidateAntiForgeryToken]
         public IActionResult Edit(Student stu, string id = "")
         {
@@ -124,7 +97,7 @@ namespace FinalApp.Controllers
         //Delete
         [HttpDelete("{id}")]
         //[ValidateAntiForgeryToken]
-        //[Authorize]
+        [Authorize]
         public IActionResult DeleteById(string id = "")
         {
             StudentList stuList = new StudentList();

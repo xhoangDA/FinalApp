@@ -3,6 +3,7 @@ using FinalApp.Data;
 using FinalApp.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using System;
@@ -26,6 +27,13 @@ namespace FinalApp.Controllers
         SqlCommand cmd = new SqlCommand();
         SqlDataReader dr;
         StudentApi _api = new StudentApi();
+
+        private readonly AppSetting _appSetting;
+
+        public AccController(IOptionsMonitor<AppSetting> optionsMonitor)
+        {
+            _appSetting = optionsMonitor.CurrentValue;
+        }
 
         void connectionString()
         {
@@ -85,7 +93,7 @@ namespace FinalApp.Controllers
         {
             var jwtTokenHandler = new JwtSecurityTokenHandler();
 
-            var secretKeyBytes = Encoding.UTF8.GetBytes("ppFAsv+D_`rgab!ge-='*{vx?P4>]qY2");
+            var secretKeyBytes = Encoding.UTF8.GetBytes(_appSetting.SecretKey);
 
             var tokenDescription = new SecurityTokenDescriptor
             {
@@ -164,7 +172,7 @@ namespace FinalApp.Controllers
         {
             connectionString();
             var jwtTokenHandler = new JwtSecurityTokenHandler();
-            var secretKeyBytes = Encoding.UTF8.GetBytes("ppFAsv+D_`rgab!ge-='*{vx?P4>]qY2");
+            var secretKeyBytes = Encoding.UTF8.GetBytes(_appSetting.SecretKey);
             var tokenValidateParam = new TokenValidationParameters()
             {
                 //tu cap token
