@@ -14,7 +14,6 @@ namespace FinalApp.Controllers
     {
         public static List<Student> students = new List<Student>();
 
-        [HttpGet]
         //[Authorize]
         // GET: Students
         //public IActionResult Get(string strSearch)
@@ -44,6 +43,7 @@ namespace FinalApp.Controllers
         //    }
         //}
 
+        [HttpGet]
         public IActionResult Get()
         {
             try
@@ -78,13 +78,12 @@ namespace FinalApp.Controllers
 
         [HttpPost]
         //[Authorize]
-        [ValidateAntiForgeryToken]
+        //[ValidateAntiForgeryToken]
         public IActionResult Create([Bind("ID,FullName,Address,Note")] Student student)
         {
             try
             {
                 var std = new Student {
-                    ID = student.ID,
                     FullName = student.FullName,
                     Address = student.Address,
                     Note = student.Note
@@ -105,7 +104,7 @@ namespace FinalApp.Controllers
 
         [HttpPut("{id}")]
         //[Authorize]
-        [ValidateAntiForgeryToken]
+        //[ValidateAntiForgeryToken]
         public IActionResult Edit(Student stu, string id = "")
         {
             StudentList stuList = new StudentList();
@@ -124,7 +123,7 @@ namespace FinalApp.Controllers
 
         //Delete
         [HttpDelete("{id}")]
-        [ValidateAntiForgeryToken]
+        //[ValidateAntiForgeryToken]
         //[Authorize]
         public IActionResult DeleteById(string id = "")
         {

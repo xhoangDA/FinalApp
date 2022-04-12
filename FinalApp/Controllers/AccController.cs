@@ -25,22 +25,23 @@ namespace FinalApp.Controllers
         SqlConnection con = new SqlConnection();
         SqlCommand cmd = new SqlCommand();
         SqlDataReader dr;
-
         StudentApi _api = new StudentApi();
-        SecurityController sc = new SecurityController();
-        string connectStr = @"data source = NTTRUNG1; database = StudentsManagement; Integrated Security=true";
 
+        void connectionString()
+        {
+            con.ConnectionString = "data source = NTTRUNG1; database = LoginAcount; Integrated Security=true";
+        }
 
         [HttpPost("Login")]
         public async Task<IActionResult> Verify(Account acc)
         {
-            SqlConnection con = new SqlConnection(connectStr);
+            connectionString();
             con.Open();
             cmd.Connection = con;
             cmd.CommandText = "select * from login where username='" + acc.Name + "' and password='" + acc.Password + "'";
-            await dr = cmd.ExecuteReaderAsync();
+            SqlDataReader reader = await cmd.ExecuteReaderAsync();
 
-            if (!dr.Read())
+            if (!reader.HasRows)
             {
                 con.Close();
                 return Ok(new ApiRespond 
@@ -51,7 +52,17 @@ namespace FinalApp.Controllers
             }
             else
             {
-                var token = await GenerateToken(acc);
+                DataTable uTable = new DataTable();
+                Account account = new Account();
+
+                uTable.Load(reader);
+
+                account.ID = Convert.ToInt32(uTable.Rows[0]["ID"]);
+                account.Name = uTable.Rows[0]["username"].ToString();
+                account.Password = uTable.Rows[0]["password"].ToString();
+
+                con.Close();
+                var token = await GenerateToken(account);
                 return Ok(new ApiRespond
                 {
                     Success = true,
@@ -107,26 +118,35 @@ namespace FinalApp.Controllers
                 IsUsed = false,
                 IsRevoked = false,
                 IssuedAt = DateTime.UtcNow,
-                ExpriredAt = DateTime.UtcNow.AddHours(1)
+                ExpireAt = DateTime.UtcNow.AddHours(1)
             };
 
-            string AddRefreshTokenSql = "INSERT INTO RefeshToken(Id, UserId, JwtId, Token, IsUsed, IsRevoked, IssuedAt, ExpriredAt) VALUES('" + refreshTokenEntity.Id +
+            string AddRefreshTokenSql = "INSERT INTO RefreshToken(Id, UserId, JwtId, Token, IsUsed, IsRevoked, IssuedAt, ExpireAt) VALUES('" + refreshTokenEntity.Id +
                 "','" + acc.ID + "', '" + token.Id + "', '" + refreshToken + "', '" + refreshTokenEntity.IsUsed + "', '" + refreshTokenEntity.IsRevoked
-                + "', '" + refreshTokenEntity.IssuedAt + "', '" + refreshTokenEntity.ExpriredAt + "');";
-
-            SqlConnection con = new SqlConnection(connectStr);
+                + "', '" + refreshTokenEntity.IssuedAt + "', '" + refreshTokenEntity.ExpireAt + "');";
+            
+            //SqlConnection connect = new SqlConnection(connectStr);
             cmd = new SqlCommand(AddRefreshTokenSql, con);
             con.Open();
             await cmd.ExecuteNonQueryAsync();
             cmd.Dispose();
             con.Close();
 
-            return new Token
+            return new Token 
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
             };
+            
         }
+
+        //private string GenerateRefreshToken()
+        //{           
+        //    Random random = new Random();
+        //    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        //    return new string(Enumerable.Repeat(chars, 32)
+        //            .Select(s => s[random.Next(s.Length)]).ToArray());
+        //}
 
         private string GenerateRefreshToken()
         {
@@ -142,6 +162,7 @@ namespace FinalApp.Controllers
         [HttpPost("RenewToken")]
         public async Task<IActionResult> RenewToken(Token model)
         {
+            connectionString();
             var jwtTokenHandler = new JwtSecurityTokenHandler();
             var secretKeyBytes = Encoding.UTF8.GetBytes("ppFAsv+D_`rgab!ge-='*{vx?P4>]qY2");
             var tokenValidateParam = new TokenValidationParameters()
@@ -162,7 +183,6 @@ namespace FinalApp.Controllers
             try
             {
                 //check 1: AccessToken valid format?
-                SqlConnection con = new SqlConnection(connectStr);
                 var tokenInVerification = jwtTokenHandler.ValidateToken(model.AccessToken, tokenValidateParam, out var validatedToken);
 
                 //check 2: Check Algorithm
@@ -194,9 +214,10 @@ namespace FinalApp.Controllers
                 }
 
                 //check 4: Rt exist in DB?
-                string selectSql = "SELECT * FROM RefreshToken WHERE Token = " + model.RefreshToken;
+                string selectSql = "SELECT * FROM RefreshToken WHERE Token ='" + model.RefreshToken + "'";
                 DataTable dt = new DataTable();
 
+                //SqlConnection connect = new SqlConnection(connectStr);
                 SqlDataAdapter da = new SqlDataAdapter(selectSql, con);
                 con.Open();
                 da.Fill(dt);
@@ -212,87 +233,87 @@ namespace FinalApp.Controllers
                     });
                 }
 
-                if (dt != null)
+                var storedToken = new RefreshToken();
+                storedToken.Id = (Guid)dt.Rows[0]["ID"];
+                storedToken.UserId = Convert.ToInt32(dt.Rows[0]["UserId"].ToString());
+                storedToken.Token = dt.Rows[0]["Token"].ToString();
+                storedToken.JwtId = dt.Rows[0]["JwtId"].ToString();
+                storedToken.IsUsed = Convert.ToBoolean(dt.Rows[0]["IsUsed"].ToString());
+                storedToken.IsRevoked = Convert.ToBoolean(dt.Rows[0]["IsRevoked"].ToString());
+                storedToken.IssuedAt = (DateTime)dt.Rows[0]["IssuedAt"];
+                storedToken.ExpireAt = (DateTime)dt.Rows[0]["ExpireAt"];
+
+                //check 5: rt is used/revoked?
+                if (storedToken.IsUsed)
                 {
-                    var storedToken = new RefreshToken();
-                    storedToken.Id = (Guid)dt.Rows[0]["ID"];
-                    storedToken.UserId = Convert.ToInt32(dt.Rows[0]["UserId"].ToString());
-                    storedToken.Token = dt.Rows[0]["Token"].ToString();
-                    storedToken.JwtId = dt.Rows[0]["JwtId"].ToString();
-                    storedToken.IsUsed = Convert.ToBoolean(dt.Rows[0]["IsUsed"].ToString());
-                    storedToken.IsRevoked = Convert.ToBoolean(dt.Rows[0]["IsRevoked"].ToString());
-                    storedToken.IssuedAt = (DateTime)dt.Rows[0]["IssuedAt"];
-                    storedToken.ExpriredAt = (DateTime)dt.Rows[0]["ExpriredAt"];
-
-                    //check 5: rt is used/revoked?
-                    if (storedToken.IsUsed)
-                    {
-                        return Ok(new ApiRespond
-                        {
-                            Success = false,
-                            Message = "Refresh token has been used."
-                        });
-                    }
-                    if (storedToken.IsRevoked)
-                    {
-                        return Ok(new ApiRespond
-                        {
-                            Success = false,
-                            Message = "Refresh token has been revoked."
-                        });
-                    }
-
-                    //check 6: AccessToken == JwtID in RefreshToken?
-                    var jti = tokenInVerification.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
-                    if (storedToken.JwtId != jti)
-                    {
-                        return Ok(new ApiRespond
-                        {
-                            Success = false,
-                            Message = "Token doesn't match."
-                        });
-                    }
-
-                    //Update token is used
-                    storedToken.IsRevoked = true;
-                    storedToken.IsUsed = true;
-
-                    string addToDbSql = @"INSERT INTO RefeshToken(Id, UserId, JwtId, Token, IsUsed, IsRevoked, IssuedAt, ExpriredAt) VALUES('" + storedToken.Id +
-                        "','" + storedToken.UserId + "', '" + storedToken.JwtId + "', '" + storedToken.Token + "', '" + storedToken.IsUsed + "', '" + storedToken.IsRevoked
-                        + "', '" + storedToken.IssuedAt + "', '" + storedToken.ExpriredAt + "');";
-
-                    SqlCommand addRefreshToken = new SqlCommand(addToDbSql, con);
-                    con.Open();
-                    await addRefreshToken.ExecuteNonQueryAsync();
-                    addRefreshToken.Dispose();
-                    con.Close();
-
-
-                    //Cretate renew token
-
-                    var user = new Account();
-                    string getUserSql = "SELECT * FROM login WHERE id = " + storedToken.UserId;
-                    SqlCommand getUserAccount = new SqlCommand(getUserSql, con);
-                    con.Open();
-                    await getUserAccount.ExecuteNonQueryAsync();
-                    getUserAccount.Dispose();
-                    con.Close();
-
-                    var token = await GenerateToken(user);
-
                     return Ok(new ApiRespond
                     {
-                        Success = true,
-                        Message = "Renew token successful",
-                        Data = token
+                        Success = false,
+                        Message = "Refresh token has been used."
                     });
                 }
-                else return BadRequest(new ApiRespond
+                if (storedToken.IsRevoked)
                 {
-                    Success = false,
-                    Message = "Error occured"
-                });
+                    return Ok(new ApiRespond
+                    {
+                        Success = false,
+                        Message = "Refresh token has been revoked."
+                    });
+                }
 
+                //check 6: AccessToken == JwtID in RefreshToken?
+                var jti = tokenInVerification.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
+                if (storedToken.JwtId != jti)
+                {
+                    return Ok(new ApiRespond
+                    {
+                        Success = false,
+                        Message = "Token doesn't match."
+                    });
+                }
+
+                //Update token is used
+                storedToken.IsRevoked = true;
+                storedToken.IsUsed = true;
+
+                string addToDbSql = "UPDATE RefreshToken SET IsUsed ='" + storedToken.IsUsed + "', IsRevoked ='"+ storedToken.IsRevoked + "' WHERE JwtId = '" + storedToken.JwtId + "'";
+
+                //SqlConnection con = new SqlConnection(connectStr);
+                SqlCommand addRefreshToken = new SqlCommand(addToDbSql, con);
+                con.Open();
+                await addRefreshToken.ExecuteNonQueryAsync();
+                addRefreshToken.Dispose();
+                con.Close();
+
+
+                //Cretate renew token
+
+                var user = new Account();
+                DataTable userTable = new DataTable();
+                string getUserSql = "SELECT * FROM login WHERE id = " + storedToken.UserId;
+                SqlCommand getUserAccount = new SqlCommand(getUserSql, con);
+                con.Open();
+                SqlDataReader reader = await getUserAccount.ExecuteReaderAsync();
+                if (reader.HasRows)
+                {
+                    userTable.Load(reader);
+
+                    user.ID = Convert.ToInt32(userTable.Rows[0]["ID"]);
+                    user.Name = userTable.Rows[0]["username"].ToString();
+                    user.Password = userTable.Rows[0]["password"].ToString();
+                }
+                getUserAccount.Dispose();
+                con.Close();
+
+                var token = await GenerateToken(user);
+
+                return Ok(new ApiRespond
+                {
+                    Success = true,
+                    Message = "Renew token successful",
+                    Data = token
+                });
+                
             }
             catch (Exception ex)
             {
