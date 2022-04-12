@@ -140,12 +140,23 @@ namespace FinalApp.Controllers
             
         }
 
+        //private string GenerateRefreshToken()
+        //{           
+        //    Random random = new Random();
+        //    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        //    return new string(Enumerable.Repeat(chars, 32)
+        //            .Select(s => s[random.Next(s.Length)]).ToArray());
+        //}
+
         private string GenerateRefreshToken()
-        {           
-            Random random = new Random();
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, 32)
-                    .Select(s => s[random.Next(s.Length)]).ToArray());
+        {
+            var random = new byte[32];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(random);
+
+                return Convert.ToBase64String(random);
+            }
         }
 
         [HttpPost("RenewToken")]
